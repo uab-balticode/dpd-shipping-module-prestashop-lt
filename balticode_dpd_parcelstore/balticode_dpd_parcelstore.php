@@ -1213,7 +1213,7 @@ HTML;
         $options = array(
             'http' => array(
                 'method' => 'POST',
-                'header' => $auth ."Content-type: application/x-www-form-urlencoded\r\n",
+                'header' => "Content-type: application/x-www-form-urlencoded\r\n",
 //                'header' => 'Content-type: application/x-www-form-urlencoded',
                 'content' => http_build_query($params),
         ));
