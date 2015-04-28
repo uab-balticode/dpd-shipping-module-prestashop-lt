@@ -37,6 +37,9 @@ if (!defined('_PS_VERSION_')) {
 if (!class_exists('balticode_dpd_parcelstore', false)) {
     Module::getInstanceByName('balticode_dpd_parcelstore');
 }
+if (!class_exists('AdminOrderBulkAction', false)) {
+    require_once(_PS_MODULE_DIR_.'balticode_dpd_courier/controllers/admin/AdminOrdersController.php');
+}
 
 /**
  * <p>Represents DPD courier shipping method.</p>
@@ -91,7 +94,7 @@ class balticode_dpd_courier extends balticode_dpd_parcelstore {
         $this->name = 'balticode_dpd_courier';
         $this->tab = 'shipping_logistics';
         $this->_parent_code = balticode_dpd_parcelstore::NAME;
-        $this->version = '0.2';
+        $this->version = '0.3';
         $this->dependencies[] = 'balticode_dpd_parcelstore';
         $this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.7');
         $this->displayName = $this->l('DPD kurjeris');
@@ -182,9 +185,65 @@ class balticode_dpd_courier extends balticode_dpd_parcelstore {
                 || !$this->registerHook('displayFooter')) {
             return false;
         }
+
+        $array_to_replace[] = array(
+            "search" => 'parent::__construct();',
+            "replace" => '
+            $this->bulk_actions[\'printDpdLabels\'] = array(\'text\' => $this->l(\'Print DPD Labels\'), \'icon\' => \'icon-print\');
+            $this->bulk_actions[\'printDpdManifest\'] = array(\'text\' => $this->l(\'Print DPD Manifest\'), \'icon\' => \'icon-print\'); 
+         ',
+            "action" => 'before',
+        );
+        $array_to_replace[] = array(
+            "search" => 'public function initToolbar()',
+            "replace" => 'public function processBulkPrintDpdLabels()
+    {
+        
+        $orderId[] = array();
+        foreach (Tools::getValue(\'orderBox\') as $id_order)
+        {
+            $odrerId[] = $id_order;
+        }
+        $labels = Module::getInstanceByName(balticode_dpd_parcelstore::NAME);
+        $pdf = $labels->dataSendExecutor->getLabels($odrerId);
+        $pdf = $labels->dataSendExecutor->getLabelsOutput($pdf);
+        return "";
+    }
+
+    public function processBulkPrintDpdManifest()
+    {
+        $labels = Module::getInstanceByName(balticode_dpd_parcelstore::NAME);
+        $pdf = $labels->dataSendExecutor->getManualManifest(Tools::getValue(\'orderBox\'));
+    }
+    ',
+            "action" => 'before',
+        );
+        if(!$this->makeOverride($array_to_replace)) return false;
+
+
+
+
+
+
+
+
+
+
+
         return true;
     }
     
+
+    private function makeOverride($rows)
+    {
+        $config = serialize($rows);
+        Configuration::updateValue(self::CONST_PREFIX . strtoupper("OVERWRITE"), $config); //save who we change
+        $test = new AdminOrderBulkAction();
+        foreach ($rows as $row) {
+            $test->addToReplace($row['search'],$row['replace'], $row['action']);
+        }
+        return $test->run();
+    }
     
     /**
      * <p>Performs following actions:</p>
@@ -207,6 +266,7 @@ class balticode_dpd_courier extends balticode_dpd_parcelstore {
                 || !$this->unregisterHook('displayFooter')) {
             return false;
         }
+
         //TODO: remove in future releases, now it is left because there was hook rename from:
         //displayBackOfficeHeader => actionAdminControllerSetMedia
         $this->unregisterHook('displayBackOfficeHeader');
@@ -214,6 +274,20 @@ class balticode_dpd_courier extends balticode_dpd_parcelstore {
         if (!$this->_getHelperModule()->removeCarrierModule($this->name)) {
             return false;
         }
+
+
+        $rows = unserialize( Configuration::get(self::CONST_PREFIX . 'OVERWRITE') );
+        foreach ($rows as $row) {
+            $array_to_replace[] = array(
+                "search" => $row['replace'],
+                "replace" => '',
+                "action" => 'replace',
+            );
+        }
+
+        if(!$this->makeOverride($array_to_replace)) return false;
+        Configuration::deleteByName(self::CONST_PREFIX . 'OVERWRITE');
+
 
         return true;
         

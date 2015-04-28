@@ -444,7 +444,7 @@ EOT;
                           try {
                               $table .=$selectedParcelTerminal['name']."<br>";
                               $table .=$selectedParcelTerminal['zip_code']."<br>";
-                              $table .="<strong>".$selectedParcelTerminal['city']."</strong> </p></td>";
+                              $table .="<strong>".$selectedParcelTerminal['city']."</strong>";
                               } catch (Exception $ex) {
                               //failure
                               print_r($ex);
@@ -458,8 +458,9 @@ EOT;
                           $table .=$delivery_address->address2."<br>";
                       }
                       $table .=$delivery_address->postcode."<br>";
-                      $table .="<strong>".$delivery_address->city."</strong> </p></td>";
+                      $table .="<strong>".$delivery_address->city."</strong>";
                     }
+                    $table .= "</p></td>";
                     $table .="<td>".$delivery_address->phone."</td>";
 
                     $table .="<td>".$weight."</td>";
